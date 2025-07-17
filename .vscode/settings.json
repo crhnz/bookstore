@@ -1,0 +1,12 @@
+{
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "java.compile.nullAnalysis.mode": "automatic",
+    "java.format.settings.profile": "GoogleStyle",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "never"
+    },
+    "java.format.enabled": true,
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 1000
+}   

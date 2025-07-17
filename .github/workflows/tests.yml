@@ -1,0 +1,49 @@
+name: TEST
+
+on:
+  workflow_run:
+    workflows: ["BUILD"]
+    types:
+      - completed
+
+jobs:
+
+  tests:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        java: [21]
+
+    steps:
+      - name: Cloning the repo ...
+        uses: actions/checkout@v4
+
+      - name: Setting up JDK ${{ matrix.java }} ...
+        uses: actions/setup-java@v4
+        with:
+          java-version: '${{ matrix.java }}'
+          distribution: 'temurin'
+
+      - name: Starting docker compose stack ...
+        run: make up
+
+      - name: Running tests on Java with coverage ${{ matrix.java }} ...
+        run: ./mvnw verify
+
+      - name: Collecting coverage reports ...
+        if: matrix.java == 21
+        run: |
+          mkdir -p coverage-reports
+          find . -type d -path "*/target/site/jacoco" -exec cp -r {} coverage-reports/ \;
+
+      - name: Upload coverage reports as artifact
+        if: matrix.java == 21
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-html
+          path: coverage-reports/
+
+      - name: stopping docker compose stack ...
+        if: always()
+        run: make down

@@ -1,0 +1,70 @@
+name: LINTERS
+
+on:
+
+  push: 
+    branches:
+      - master
+
+  pull_request:
+    branches:
+      - master
+
+
+jobs:
+
+  lint:
+
+    runs-on: ubuntu-latest
+ 
+    strategy:
+      matrix:
+        java: [21]
+    
+    steps:
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up JDK (para ejecutar Maven)
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: 'temurin'
+
+      - name: Install dependencies (para análisis)
+        run: ./mvnw install -DskipTests
+        continue-on-error: true
+
+      - name: Init failure tracker
+        run: echo "LINTER_FAILED=0" >> $GITHUB_ENV
+
+      - name: Checking code format (Spotless)
+        run: |
+          ./mvnw spotless:check > spotless-output.txt || echo "LINTER_FAILED=1" >> $GITHUB_ENV
+        continue-on-error: true
+
+      - name: Running PMD
+        run: |
+          ./mvnw pmd:check || echo "LINTER_FAILED=1" >> $GITHUB_ENV
+        continue-on-error: true
+
+      - name: Running SpotBugs
+        run: |
+          ./mvnw spotbugs:spotbugs || echo "LINTER_FAILED=1" >> $GITHUB_ENV
+        continue-on-error: true
+
+      - name: Uploading HTML reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-analysis-reports
+          path: |
+            spotless-output.txt
+            **/target/site/pmd.html
+            **/target/site/spotbugs.html
+
+      - name: Fail if any linter failed
+        if: env.LINTER_FAILED == '1'
+        run: |
+          echo "One or more linters failed. See logs or reports for details."
+          exit 1

@@ -1,0 +1,60 @@
+name: BUILD
+
+on:
+  push: 
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [21]
+
+    steps:
+    - name: Cloning the repo ...
+      uses: actions/checkout@v4
+
+    - name: Loading version info ...
+      run: |        
+        source .github/workflows/.version.env
+        echo "VERSION_MAJOR=$VERSION_MAJOR" >> $GITHUB_ENV
+        echo "VERSION_MINOR=$VERSION_MINOR" >> $GITHUB_ENV
+        echo "BUILD_VERSION=$VERSION_MAJOR.$VERSION_MINOR.${{ github.run_number }}" >> $GITHUB_ENV 
+
+    - name: Setting up JDK ...
+      uses: actions/setup-java@v4
+      with:
+        java-version: '${{ matrix.java }}'
+        distribution: 'temurin'
+
+    - name: Enabling Docker build ...
+      uses: docker/setup-buildx-action@v3
+
+    - name: Building backend image ...
+      env:
+        VERSION: ${{ env.BUILD_VERSION }}
+        IMAGE_NAME: backend
+        JAVA_VERSION: ${{ matrix.java }}
+      run: make image
+
+    - name: Saving Docker image as tarball ...
+      run: docker save -o backend-${{ matrix.java }}-${{ env.BUILD_VERSION }}.tar backend:${{ env.BUILD_VERSION }}
+
+    - name: Uploading image tarball ...
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-${{ matrix.java }}-${{ env.BUILD_VERSION }}.tar
+        path: backend-${{ matrix.java }}-${{ env.BUILD_VERSION }}.tar
+
+    - name: Save version info artifact
+      run: echo "${{ env.BUILD_VERSION }}" > build-version.txt
+
+    - name: Upload version info
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-version
+        path: build-version.txt
+

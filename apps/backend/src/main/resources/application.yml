@@ -1,0 +1,15 @@
+spring:
+    application:
+        name: demo
+
+    rabbitmq:
+        host: localhost
+        port: 5672
+        username: guest  
+        password: guest
+
+backend:
+    eventbus:
+        queues:
+            book-created: "com.bms.books.created"
+            book-deleted: "com.bms.books.deleted"
